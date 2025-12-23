@@ -5,7 +5,7 @@ Add support for Federal Employees Retirement System (FERS) pensions, incorporati
 
 ## 2. User Interface Changes (`ui/Fixed_Income.py`)
 Add a new section titled **"FERS Pension"** with the following inputs:
-- **High-3 Average Salary**: Numeric input for the average of the highest three consecutive years of pay.
+- **High-3 Average Salary**: Numeric input for the average of the highest three consecutive years of pay in nominal dollars (at retirement).
 - **Years of Service**: Numeric input for creditable service years.
 - **Commencement Age & Month**: Age and month when the annuity starts.
 - **Survivor Benefit Selection**:

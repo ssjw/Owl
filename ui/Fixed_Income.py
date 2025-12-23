@@ -166,11 +166,11 @@ to estimate {iname1}'s PIA.""")
     st.markdown("#### :orange[FERS Pension]")
     col1, col2, col3 = st.columns(3, gap="large", vertical_alignment="top")
     with col1:
-        msgFersSalary = "Average of highest 3 consecutive years of pay."
+        msgFersSalary = "Average of highest 3 consecutive years of pay in nominal $ (at retirement)."
         msgFersYears = "Total years of service used for calculation."
         msgFersSRS = "Special Retirement Supplement."
 
-        getIntInput(0, "fersHigh3", "High-3 average salary (\\$)", help=msgFersSalary)
+        getIntInput(0, "fersHigh3", "High-3 average salary (nominal \\$)", help=msgFersSalary)
         getIntInput(0, "fersYears", "years of creditable service", help=msgFersYears)
         incol1, incol2 = st.columns(2, gap="large", vertical_alignment="top")
         with incol1:
@@ -191,7 +191,7 @@ to estimate {iname1}'s PIA.""")
 
     with col2:
         if kz.getCaseKey("status") == "married":
-            getIntInput(1, "fersHigh3", "High-3 average salary (\\$)", help=msgFersSalary)
+            getIntInput(1, "fersHigh3", "High-3 average salary (nominal \\$)", help=msgFersSalary)
             getIntInput(1, "fersYears", "years of creditable service", help=msgFersYears)
             incol1, incol2 = st.columns(2, gap="large", vertical_alignment="top")
             with incol1:

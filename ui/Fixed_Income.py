@@ -162,5 +162,53 @@ to estimate {iname1}'s PIA.""")
                 getIntInput(1, "pAge_m", "...and month(s)", 0, msg2, max_val=11, prompt=False)
             getToggleInput(1, "pIdx", "Inflafion adjusted")
 
+    st.divider()
+    st.markdown("#### :orange[FERS Pension]")
+    col1, col2, col3 = st.columns(3, gap="large", vertical_alignment="top")
+    with col1:
+        msgFersSalary = "Average of highest 3 consecutive years of pay."
+        msgFersYears = "Total years of service used for calculation."
+        msgFersSRS = "Special Retirement Supplement."
+
+        getIntInput(0, "fersHigh3", "High-3 average salary (\\$)", help=msgFersSalary)
+        getIntInput(0, "fersYears", "years of creditable service", help=msgFersYears)
+        incol1, incol2 = st.columns(2, gap="large", vertical_alignment="top")
+        with incol1:
+            kz.initCaseKey("fersAge_y0", 57)
+            kz.initCaseKey("fersAge_m0", 0)
+            getIntInput(0, "fersAge_y", "starting at age...", 57, msg2)
+        with incol2:
+            getIntInput(0, "fersAge_m", "...and month(s)", 0, msg2, max_val=11, prompt=False)
+
+        nkey = "fersSurvivor0"
+        kz.initCaseKey(nkey, "None")
+        choices = ["None", "Partial (25%)", "Full (50%)"]
+        st.selectbox(f"{kz.getCaseKey('iname0')}'s survivor benefit", choices,
+                    index=kz.getIndex(kz.getCaseKey(nkey), choices),
+                    on_change=kz.setpull, args=[nkey], key=kz.genCaseKey(nkey))
+
+        getIntInput(0, "fersSRS", "monthly SRS amount (\\$)", help=msgFersSRS)
+
+    with col2:
+        if kz.getCaseKey("status") == "married":
+            getIntInput(1, "fersHigh3", "High-3 average salary (\\$)", help=msgFersSalary)
+            getIntInput(1, "fersYears", "years of creditable service", help=msgFersYears)
+            incol1, incol2 = st.columns(2, gap="large", vertical_alignment="top")
+            with incol1:
+                kz.initCaseKey("fersAge_y1", 57)
+                kz.initCaseKey("fersAge_m1", 0)
+                getIntInput(1, "fersAge_y", "starting at age...", 57, msg2)
+            with incol2:
+                getIntInput(1, "fersAge_m", "...and month(s)", 0, msg2, max_val=11, prompt=False)
+
+            nkey = "fersSurvivor1"
+            kz.initCaseKey(nkey, "None")
+            choices = ["None", "Partial (25%)", "Full (50%)"]
+            st.selectbox(f"{kz.getCaseKey('iname1')}'s survivor benefit", choices,
+                        index=kz.getIndex(kz.getCaseKey(nkey), choices),
+                        on_change=kz.setpull, args=[nkey], key=kz.genCaseKey(nkey))
+
+            getIntInput(1, "fersSRS", "monthly SRS amount (\\$)", help=msgFersSRS)
+
     # Show progress bar at bottom (only when case is defined)
     cp.show_progress_bar()

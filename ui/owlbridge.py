@@ -107,6 +107,29 @@ def prepareRun(plan):
         st.error(f"Failed setting social security: {e}")
         return
 
+    # FERS Pension
+    high3s = [kz.getCaseKey("fersHigh30")]
+    years = [kz.getCaseKey("fersYears0")]
+    ages_f = [kz.getCaseKey("fersAge_y0") + kz.getCaseKey("fersAge_m0")/12.0]
+    s_map = {"None": 0, "Partial (25%)": 25, "Full (50%)": 50}
+    survivors_labels = [kz.getCaseKey("fersSurvivor0")]
+    survivors = [s_map.get(survivors_labels[0], 0)]
+    srs_amounts = [kz.getCaseKey("fersSRS0")]
+
+    if ni == 2:
+        high3s.append(kz.getCaseKey("fersHigh31"))
+        years.append(kz.getCaseKey("fersYears1"))
+        ages_f.append(kz.getCaseKey("fersAge_y1") + kz.getCaseKey("fersAge_m1")/12.0)
+        survivors_labels.append(kz.getCaseKey("fersSurvivor1"))
+        survivors.append(s_map.get(survivors_labels[1], 0))
+        srs_amounts.append(kz.getCaseKey("fersSRS1"))
+
+    try:
+        plan.setFersPension(high3s, years, ages_f, survivors, srs_amounts, survivors_labels)
+    except Exception as e:
+        st.error(f"Failed setting FERS pensions: {e}")
+        return
+
     if ni == 2:
         benfrac = [kz.getCaseKey("benf0"), kz.getCaseKey("benf1"), kz.getCaseKey("benf2")]
         try:
@@ -792,6 +815,15 @@ def genDic(plan):
         dic[f"pAge_m{i}"] = round((plan.pensionAges[i] % 1.) * 12)
         dic[f"pAmt{i}"] = plan.pensionAmounts[i]
         dic[f"pIdx{i}"] = plan.pensionIsIndexed[i]
+
+        # FERS
+        dic[f"fersHigh3{i}"] = plan.fersHigh3s[i]
+        dic[f"fersYears{i}"] = plan.fersYears[i]
+        dic[f"fersAge_y{i}"] = int(plan.fersAges[i])
+        dic[f"fersAge_m{i}"] = round((plan.fersAges[i] % 1.0) * 12)
+        dic[f"fersSurvivor{i}"] = plan.fersSurvivors[i]
+        dic[f"fersSRS{i}"] = plan.fersSRSAmounts[i]
+
         for j1 in range(plan.N_j):
             dic[accName[j1] + str(i)] = plan.beta_ij[i, j1] / 1000
 

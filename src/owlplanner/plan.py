@@ -300,10 +300,18 @@ class Plan:
 
         # Default to zero pension and social security.
         self.pi_in = np.zeros((self.N_i, self.N_n))
+        self.piFers_in = np.zeros((self.N_i, self.N_n))
+        self.srsFers_in = np.zeros((self.N_i, self.N_n))
+        self.hasFers = [False] * self.N_i
         self.zeta_in = np.zeros((self.N_i, self.N_n))
         self.pensionAmounts = np.zeros(self.N_i, dtype=np.int32)
         self.pensionAges = 65 * np.ones(self.N_i, dtype=np.int32)
         self.pensionIsIndexed = [False] * self.N_i
+        self.fersHigh3s = np.zeros(self.N_i)
+        self.fersYears = np.zeros(self.N_i)
+        self.fersAges = 57 * np.ones(self.N_i)
+        self.fersSurvivors = ["None"] * self.N_i
+        self.fersSRSAmounts = np.zeros(self.N_i)
         self.ssecAmounts = np.zeros(self.N_i, dtype=np.int32)
         self.ssecAges = 67 * np.ones(self.N_i, dtype=np.int32)
 
@@ -535,6 +543,102 @@ class Plan:
         nu /= 100
         self.mylog.vprint(f"Heirs tax rate on tax-deferred portion of estate set to {u.pc(nu, f=0)}.")
         self.nu = nu
+        self.caseStatus = "modified"
+
+    def setFersPension(self, high3s, years, ages, survivors, srs_amounts, survivors_labels=None):
+        """
+        Set FERS pension for each individual.
+        high3s: High-3 average salary ($).
+        years: years of creditable service.
+        ages: age at commencement (float).
+        survivors: survivor benefit selection (0, 25, 50).
+        srs_amounts: monthly SRS amount ($).
+        survivors_labels: original labels for survivors (None, Partial, Full)
+        """
+        if len(high3s) != self.N_i:
+            raise ValueError(f"high3s must have {self.N_i} entries.")
+        if len(years) != self.N_i:
+            raise ValueError(f"years must have {self.N_i} entries.")
+        if len(ages) != self.N_i:
+            raise ValueError(f"ages must have {self.N_i} entries.")
+        if len(survivors) != self.N_i:
+            raise ValueError(f"survivors must have {self.N_i} entries.")
+        if len(srs_amounts) != self.N_i:
+            raise ValueError(f"srs_amounts must have {self.N_i} entries.")
+
+        self.piFers_in = np.zeros((self.N_i, self.N_n))
+        self.srsFers_in = np.zeros((self.N_i, self.N_n))
+
+        self.fersHigh3s = np.array(high3s)
+        self.fersYears = np.array(years)
+        self.fersAges = np.array(ages)
+        self.fersSRSAmounts = np.array(srs_amounts)
+        if survivors_labels:
+            self.fersSurvivors = survivors_labels
+
+        thisyear = date.today().year
+
+        for i in range(self.N_i):
+            if high3s[i] == 0:
+                self.hasFers[i] = False
+                continue
+
+            self.hasFers[i] = True
+
+            # Base annuity calculation
+            # 1.1% if age >= 62 AND years >= 20 AT RETIREMENT
+            # otherwise 1.0%
+            multiplier = 0.01
+            if ages[i] >= 62 and years[i] >= 20:
+                multiplier = 0.011
+
+            monthly_base = (multiplier * high3s[i] * years[i]) / 12.0
+
+            # Survivor reduction
+            # None (0%): 0% reduction
+            # Partial (25%): 5% reduction
+            # Full (50%): 10% reduction
+            if survivors[i] == 25:
+                monthly_base *= 0.95
+            elif survivors[i] == 50:
+                monthly_base *= 0.90
+
+            # Populate piFers_in (annual nominal base)
+            # Commencement year logic same as setPension
+            janage_commence = ages[i] + (self.mobs[i] - 1)/12.0
+            iage_jan = int(janage_commence)
+            realns = iage_jan - thisyear + self.yobs[i]
+            ns = max(0, realns)
+            nd = self.horizons[i]
+
+            self.piFers_in[i, ns:nd] = monthly_base * 12
+            if realns >= 0:
+                self.piFers_in[i, ns] *= (1 - (janage_commence % 1.0))
+
+            # SRS Supplemental Annuity
+            # Paid until age 62
+            # Not indexed
+            srs_monthly = srs_amounts[i]
+            if srs_monthly > 0 and janage_commence < 62:
+                age_62_year = 62 - thisyear + self.yobs[i]
+                n62 = max(0, age_62_year)
+
+                # Commencement year
+                if ns < nd:
+                    if ns == n62:
+                        self.srsFers_in[i, ns] = srs_monthly * 12 * (62 - janage_commence)
+                    else:
+                        self.srsFers_in[i, ns] = srs_monthly * 12 * (1 - (janage_commence % 1.0))
+
+                        # Years between commencement and turning 62
+                        if n62 > ns + 1:
+                            self.srsFers_in[i, ns+1:min(n62, nd)] = srs_monthly * 12
+
+                        # Year turning 62
+                        if n62 < nd and n62 > ns:
+                            self.srsFers_in[i, n62] = srs_monthly * 12 * ((self.mobs[i] - 1) / 12.0)
+
+        self._adjustedParameters = False
         self.caseStatus = "modified"
 
     def setPension(self, amounts, ages, indexed=None):
@@ -1168,6 +1272,29 @@ class Plan:
             for i in range(self.N_i):
                 if self.pensionIsIndexed[i]:
                     self.piBar_in[i] *= gamma_n[:-1]
+
+                if self.hasFers[i]:
+                    # Implement Diet-COLA for FERS pension starting at age 62
+                    fers_pi_indexed = np.array(self.piFers_in[i])
+                    # Iterate through years to apply cumulative Diet-COLA
+                    cumulative_cola = 1.0
+                    for n in range(1, self.N_n):
+                        # Age at beginning of year n
+                        age_at_n = self.year_n[n] - self.yobs[i] - (self.mobs[i] - 1) / 12.0
+                        if age_at_n >= 62:
+                            # Apply COLA based on inflation of previous year (n-1)
+                            cpi = self.tau_kn[-1, n - 1]
+                            if cpi < 0.02:
+                                cola = cpi
+                            elif cpi <= 0.03:
+                                cola = 0.02
+                            else:
+                                cola = cpi - 0.01
+                            # FERS COLAs are floored at 0%
+                            cumulative_cola *= (1 + max(0, cola))
+                        fers_pi_indexed[n] *= cumulative_cola
+
+                    self.piBar_in[i] += fers_pi_indexed + self.srsFers_in[i]
 
             self.nm, self.L_nq, self.C_nq = tx.mediVals(self.yobs, self.horizons, gamma_n, self.N_n, self.N_q)
 

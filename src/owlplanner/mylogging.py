@@ -1,5 +1,9 @@
 import sys
-from loguru import logger as loguru_logger
+try:
+    from loguru import logger as loguru_logger
+    HAS_LOGURU = True
+except ImportError:
+    HAS_LOGURU = False
 
 
 class Logger(object):
@@ -10,11 +14,14 @@ class Logger(object):
 
         # --- Detect loguru backend ---------------------------------
         if logstreams == "loguru" or logstreams == ["loguru"]:
-            self._use_loguru = True
-            self._logstreams = None
+            if HAS_LOGURU:
+                self._use_loguru = True
+                self._logstreams = None
 
-            loguru_logger.debug("Using loguru as logging backend.")
-            return
+                loguru_logger.debug("Using loguru as logging backend.")
+                return
+            else:
+                logstreams = None
 
         # --- Existing stream-based behavior ------------------------
         if logstreams is None or logstreams == [] or len(logstreams) > 2:

@@ -8,16 +8,28 @@ def getIntInput(i, key, thing, defval=0, help=None, min_val=0, max_val=None, pro
     nkey = key + str(i)
     kz.initCaseKey(nkey, defval)
     stored_value = kz.getCaseKey(nkey)
-    # Clamp stored value to valid range if it's outside
+
+    # Ensure all numerical parameters are of the same type (int)
+    # to avoid StreamlitMixedNumericTypesError
     if stored_value is not None:
-        if min_val is not None and stored_value < min_val:
-            stored_value = min_val
-            kz.setCaseKey(nkey, stored_value)
-        if max_val is not None and stored_value > max_val:
-            stored_value = max_val
-            kz.setCaseKey(nkey, stored_value)
+        stored_value = int(stored_value)
     else:
-        stored_value = defval
+        stored_value = int(defval)
+
+    if min_val is not None:
+        min_val = int(min_val)
+
+    if max_val is not None:
+        max_val = int(max_val)
+
+    # Clamp stored value to valid range if it's outside
+    if min_val is not None and stored_value < min_val:
+        stored_value = min_val
+        kz.setCaseKey(nkey, stored_value)
+    if max_val is not None and stored_value > max_val:
+        stored_value = max_val
+        kz.setCaseKey(nkey, stored_value)
+
     if prompt:
         own = f"{kz.getCaseKey('iname' + str(i))}'s "
     else:
@@ -26,6 +38,7 @@ def getIntInput(i, key, thing, defval=0, help=None, min_val=0, max_val=None, pro
         f"{own}{thing}", min_value=min_val, value=stored_value,
         on_change=kz.setpull, help=help, args=[nkey], key=kz.genCaseKey(nkey),
         max_value=max_val,
+        step=1
     )
 
 

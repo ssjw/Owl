@@ -307,11 +307,11 @@ class Plan:
         self.pensionAmounts = np.zeros(self.N_i, dtype=np.int32)
         self.pensionAges = 65 * np.ones(self.N_i, dtype=np.int32)
         self.pensionIsIndexed = [False] * self.N_i
-        self.fersHigh3s = np.zeros(self.N_i)
-        self.fersYears = np.zeros(self.N_i)
+        self.fersHigh3s = np.zeros(self.N_i, dtype=np.int32)
+        self.fersYears = np.zeros(self.N_i, dtype=np.int32)
         self.fersAges = 57 * np.ones(self.N_i)
         self.fersSurvivors = ["None"] * self.N_i
-        self.fersSRSAmounts = np.zeros(self.N_i)
+        self.fersSRSAmounts = np.zeros(self.N_i, dtype=np.int32)
         self.ssecAmounts = np.zeros(self.N_i, dtype=np.int32)
         self.ssecAges = 67 * np.ones(self.N_i, dtype=np.int32)
 
@@ -576,10 +576,10 @@ class Plan:
         self.piFers_in = np.zeros((self.N_i, self.N_n))
         self.srsFers_in = np.zeros((self.N_i, self.N_n))
 
-        self.fersHigh3s = np.array(high3s)
-        self.fersYears = np.array(years)
+        self.fersHigh3s = np.array(high3s, dtype=np.int32)
+        self.fersYears = np.array(years, dtype=np.int32)
         self.fersAges = np.array(ages)
-        self.fersSRSAmounts = np.array(srs_amounts)
+        self.fersSRSAmounts = np.array(srs_amounts, dtype=np.int32)
         if survivors_labels:
             self.fersSurvivors = survivors_labels
 

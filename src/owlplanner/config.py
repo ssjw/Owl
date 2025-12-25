@@ -63,6 +63,15 @@ def saveConfig(myplan, file, mylog):
         "Social security ages": myplan.ssecAges.tolist(),
     }
 
+    # FERS Pension.
+    diconf["FERS Pension"] = {
+        "High-3 average salary": (myplan.fersHigh3s).tolist(),
+        "Years of service": (myplan.fersYears).tolist(),
+        "Ages": (myplan.fersAges).tolist(),
+        "Survivor benefits": myplan.fersSurvivors,
+        "SRS amounts": (myplan.fersSRSAmounts).tolist(),
+    }
+
     # Rates Selection.
     diconf["Rates Selection"] = {
         "Heirs rate on tax-deferred estate": float(100 * myplan.nu),
@@ -224,6 +233,19 @@ def readConfig(file, *, verbose=True, logstreams=None, readContributions=True):
     pensionAges = np.array(diconf["Fixed Income"]["Pension ages"])
     pensionIsIndexed = diconf["Fixed Income"]["Pension indexed"]
     p.setPension(pensionAmounts, pensionAges, pensionIsIndexed)
+
+    # FERS Pension.
+    if "FERS Pension" in diconf:
+        fersHigh3s = diconf["FERS Pension"].get("High-3 average salary", [0] * icount)
+        fersYears = diconf["FERS Pension"].get("Years of service", [0] * icount)
+        fersAges = diconf["FERS Pension"].get("Ages", [57.0] * icount)
+        fersSurvivors_labels = diconf["FERS Pension"].get("Survivor benefits", ["None"] * icount)
+        fersSRS = diconf["FERS Pension"].get("SRS amounts", [0] * icount)
+
+        s_map = {"None": 0, "Partial (25%)": 25, "Full (50%)": 50}
+        fersSurvivors = [s_map.get(label, 0) for label in fersSurvivors_labels]
+
+        p.setFersPension(fersHigh3s, fersYears, fersAges, fersSurvivors, fersSRS, fersSurvivors_labels)
 
     # Rates Selection.
     p.setDividendRate(float(diconf["Rates Selection"].get("Dividend rate", 1.8)))    # Fix for mod.

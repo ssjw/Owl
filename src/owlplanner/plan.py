@@ -566,6 +566,13 @@ class Plan:
         if len(srs_amounts) != self.N_i:
             raise ValueError(f"srs_amounts must have {self.N_i} entries.")
 
+        for s in survivors:
+            if s not in [0, 25, 50]:
+                raise ValueError("Survivor selection must be 0, 25, or 50.")
+
+        self.mylog.vprint("Setting FERS pension high-3s to", [u.d(high3s[i]) for i in range(self.N_i)],
+                          "at age(s)", [ages[i] for i in range(self.N_i)])
+
         self.piFers_in = np.zeros((self.N_i, self.N_n))
         self.srsFers_in = np.zeros((self.N_i, self.N_n))
 
@@ -638,8 +645,8 @@ class Plan:
                         if n62 < nd and n62 > ns:
                             self.srsFers_in[i, n62] = srs_monthly * 12 * ((self.mobs[i] - 1) / 12.0)
 
-        self._adjustedParameters = False
         self.caseStatus = "modified"
+        self._adjustedParameters = False
 
     def setPension(self, amounts, ages, indexed=None):
         """
